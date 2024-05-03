@@ -1,0 +1,4 @@
+## Attribution
+
+Portions of this code mainly the frontend were adapted from a Udemy course by Reece Kenney. All rights belong to the original author.
+
