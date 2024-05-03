@@ -1,6 +1,7 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 import 'dotenv/config'
+import chatRouter from './chat/chatRouter'
 
 const app = express()
 
@@ -12,6 +13,8 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-app.listen(3050, () => {
-  console.log('Server started on port 3050')
+app.use('/chat', chatRouter)
+
+app.listen(3052, () => {
+  console.log('Server started on port 3052')
 })
