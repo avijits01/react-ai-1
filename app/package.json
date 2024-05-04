@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --no-dev --minify --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "react-devtools": "react-devtools"
+  
   },
   "dependencies": {
     "@expo/react-native-action-sheet": "^4.0.1",
