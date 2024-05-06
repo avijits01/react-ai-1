@@ -8,175 +8,208 @@ import {
   ScrollView,
   ActivityIndicator,
   FlatList,
-  Keyboard,
-} from 'react-native';
-import 'react-native-get-random-values';
-import { useContext, useState, useRef } from 'react';
-import { ThemeContext, AppContext } from '../context';
+  Keyboard
+} from 'react-native'
+import 'react-native-get-random-values'
+import { useContext, useState, useRef } from 'react'
+import { ThemeContext, AppContext } from '../context'
+import { getEventSource, getFirstN, getFirstNCharsOrLess, getChatType } from '../utils'
+import { v4 as uuid } from 'uuid'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import {
-  getEventSource,
-  getFirstN,
-  getFirstNCharsOrLess,
-  getChatType,
-} from '../utils';
-import { v4 as uuid } from 'uuid';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { IOpenAIMessages, IOpenAIStateWithIndex } from '../../types';
-import * as Clipboard from 'expo-clipboard';
-import { useActionSheet } from '@expo/react-native-action-sheet';
-import Markdown from '@ronradtke/react-native-markdown-display';
+  IOpenAIMessages,
+  IOpenAIStateWithIndex
+} from '../../types'
+import * as Clipboard from 'expo-clipboard'
+import { useActionSheet } from '@expo/react-native-action-sheet'
+import Markdown from '@ronradtke/react-native-markdown-display'
 
 export function Chat() {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [userInput, setUserInput] = useState<string>('');
-  const scrollViewReference = useRef<ScrollView | null>(null);
-  const { showActionSheetWithOptions } = useActionSheet();
+  const [loading, setLoading] = useState<boolean>(false)
+  const [input, setInput] = useState<string>('')
+  const scrollViewRef = useRef<ScrollView | null>(null)
+  const { showActionSheetWithOptions } = useActionSheet()
 
-  // OpenAI state management
-  const [openAIMessages, setOpenAIMessages] = useState<IOpenAIMessages[]>([]);
-  const [openAIResponse, setOpenAIResponse] = useState<IOpenAIStateWithIndex>({
+  // claude state management
+  const [claudeAPIMessages, setClaudeAPIMessages] = useState('')
+  const [claudeResponse, setClaudeResponse] = useState({
     messages: [],
     index: uuid(),
-  });
+  })
 
-  const { theme } = useContext(ThemeContext);
-  const { chatType } = useContext(AppContext);
-  const styles = getStyles(theme);
+  // openAI state management
+  const [openaiMessages, setOpenaiMessages] = useState<IOpenAIMessages[]>([])
+  const [openaiResponse, setOpenaiResponse] = useState<IOpenAIStateWithIndex>({
+    messages: [],
+    index: uuid()
+  })
 
-  // Function to handle user input and generate OpenAI response
-  async function handleChat() {
-    if (!userInput) return;
+  // cohere state management
+  const [cohereResponse, setCohereResponse] = useState({
+    messages: [],
+    index: uuid()
+  })
+
+  // mistral state management
+  const [mistralAPIMessages, setMistralAPIMessages] = useState('')
+  const [mistralResponse, setMistralResponse] = useState({
+    messages: [],
+    index: uuid()
+  })
+
+
+  // Gemini state management
+  const [geminiAPIMessages, setGeminiAPIMessages] = useState('')
+  const [geminiResponse, setGeminiResponse] = useState({
+    messages: [],
+    index: uuid()
+  })
+
+  const { theme } = useContext(ThemeContext)
+  const { chatType } = useContext(AppContext)
+  const styles = getStyles(theme)
+
+
+  async function chat() {
+    if (!input) return;
     Keyboard.dismiss();
-    generateOpenAIResponse();
+    generateOpenaiResponse();
   }
 
-  // Function to generate OpenAI response
-  async function generateOpenAIResponse() {
+  async function generateOpenaiResponse() {
     try {
-      setIsLoading(true);
-      // Set message state for OpenAI to have context on previous conversations
-      let messagesRequest = getFirstN({ messages: openAIMessages });
-      if (openAIResponse.messages.length) {
+      setLoading(true)
+      // set message state for openai to have context on previous conversations
+      let messagesRequest = getFirstN({ messages: openaiMessages })
+      if (openaiResponse.messages.length) {
         messagesRequest = [
           ...messagesRequest,
           {
             role: 'assistant',
             content: getFirstNCharsOrLess(
-              openAIResponse.messages[openAIResponse.messages.length - 1]
-                .assistant
-            ),
-          },
-        ];
+              openaiResponse.messages[openaiResponse.messages.length -1].assistant
+            )
+          }
+        ]
       }
-      messagesRequest = [...messagesRequest, { role: 'user', content: userInput }];
-      setOpenAIMessages(messagesRequest);
+      messagesRequest = [...messagesRequest, {role: 'user', content: input}]
+      setOpenaiMessages(messagesRequest)
 
-      // Set local OpenAI state to display user's most recent question
-      let openAIArray = [
-        ...openAIResponse.messages,
+      // set local openai state to dislay user's most recent question
+      let openaiArray = [
+        ...openaiResponse.messages,
         {
-          user: userInput,
-          assistant: '',
-        },
-      ];
-      setOpenAIResponse((prevState) => ({
-        index: prevState.index,
-        messages: JSON.parse(JSON.stringify(openAIArray)),
-      }));
+          user: input,
+          assistant: ''
+        }
+      ]
+      setOpenaiResponse(c => ({
+        index: c.index,
+        messages: JSON.parse(JSON.stringify(openaiArray))
+      }))
+      console.log('openaiArray: ', openaiArray)
 
-      let localResponse = '';
+      let localResponse = ''
       const eventSourceArgs = {
         body: {
           messages: messagesRequest,
-          model: chatType.label,
+          model: chatType.label
         },
-        type: getChatType(chatType),
-      };
-      setUserInput('');
-      const eventSource = getEventSource(eventSourceArgs);
-
-      // Event listener for server-sent events
-      const listener = (event: any) => {
-        if (event.type === 'open') {
-          setIsLoading(false);
+        type: getChatType(chatType)
+      }
+      setInput('')
+      const eventSource = getEventSource(eventSourceArgs)
+// admskl
+      console.log('about to open listener...')
+      const listener = (event:any) => {
+        console.log('event: ', event)
+        if (event.type === "open") {
+          console.log("Open SSE connection.")
+          setLoading(false)
         } else if (event.type === 'message') {
-          if (event.data !== '[DONE]') {
+          if (event.data !== "[DONE]") {
             if (localResponse.length < 850) {
-              scrollViewReference.current?.scrollToEnd({
-                animated: true,
-              });
+              scrollViewRef.current?.scrollToEnd({
+                animated: true
+              })
             }
-            localResponse = localResponse + JSON.parse(event.data).content;
-            openAIArray[openAIArray.length - 1].assistant = localResponse;
-            setOpenAIResponse((prevState) => ({
-              index: prevState.index,
-              messages: JSON.parse(JSON.stringify(openAIArray)),
-            }));
+            // if (!JSON.parse(event.data).content) return
+            localResponse = localResponse + JSON.parse(event.data).content
+            openaiArray[openaiArray.length - 1].assistant = localResponse
+            setOpenaiResponse(c => ({
+              index: c.index,
+              messages: JSON.parse(JSON.stringify(openaiArray))
+            }))
           } else {
-            setIsLoading(false);
-            eventSource.close();
+            setLoading(false)
+            eventSource.close()
           }
-        } else if (event.type === 'error' || event.type === 'exception') {
-          console.error('Connection error:', event.message);
-          setIsLoading(false);
-          eventSource.close();
+        } else if (event.type === "error") {
+          console.error("Connection error:", event.message)
+          setLoading(false)
+          eventSource.close()
+        } else if (event.type === "exception") {
+          console.error("Error:", event.message, event.error)
+          setLoading(false)
+          eventSource.close()
         }
-      };
-      eventSource.addEventListener('open', listener);
-      eventSource.addEventListener('message', listener);
-      eventSource.addEventListener('error', listener);
+      }
+      eventSource.addEventListener("open", listener)
+      eventSource.addEventListener("message", listener)
+      eventSource.addEventListener("error", listener)
     } catch (err) {
-      console.log('Error in generateOpenAIResponse: ', err);
+      console.log('error in generateOpenaiResponse: ', err)
     }
   }
 
-  // Function to copy text to clipboard
-  async function copyToClipboard(text: string) {
-    await Clipboard.setStringAsync(text);
+
+  async function copyToClipboard(text) {
+    await Clipboard.setStringAsync(text)
   }
 
-  // Function to show clipboard action sheet
-  async function showClipboardActionSheet(text: string) {
-    const cancelButtonIndex = 2;
-    showActionSheetWithOptions(
-      {
-        options: ['Copy to clipboard', 'Clear chat', 'Cancel'],
-        cancelButtonIndex,
-      },
-      (selectedIndex) => {
-        if (selectedIndex === 0) {
-          copyToClipboard(text);
-        }
-        if (selectedIndex === 1) {
-          clearChat();
-        }
+  async function showClipboardActionsheet(text) {
+    const cancelButtonIndex = 2
+    showActionSheetWithOptions({
+      options: ['Copy to clipboard', 'Clear chat', 'cancel'],
+      cancelButtonIndex
+    }, selectedIndex => {
+      if (selectedIndex === Number(0)) {
+        copyToClipboard(text)
       }
-    );
+      if (selectedIndex === 1) {
+        clearChat()
+      }
+    })
   }
 
-  // Function to clear the chat
   async function clearChat() {
-    if (isLoading) return;
-    setOpenAIResponse({ messages: [], index: uuid() });
-    setOpenAIMessages([]);
+    if (loading) return;
+    setOpenaiResponse({ messages: [], index: uuid() });
+    setOpenaiMessages([]);
   }
 
-  // Function to render each item in the chat list
-  function renderChatItem({ item, index }: { item: any; index: number }) {
+  function renderItem({
+    item, index
+  } : {
+    item: any, index: number
+  }) {
     return (
       <View style={styles.promptResponse} key={index}>
         <View style={styles.promptTextContainer}>
           <View style={styles.promptTextWrapper}>
-            <Text style={styles.promptText}>{item.user}</Text>
+            <Text style={styles.promptText}>
+              {item.user}
+            </Text>
           </View>
         </View>
-        {item.assistant && (
+      {
+        item.assistant && (
           <View style={styles.textStyleContainer}>
-            <Markdown style={styles.markdownStyle as any}>
-              {item.assistant}
-            </Markdown>
+            <Markdown
+              style={styles.markdownStyle as any}
+            >{item.assistant}</Markdown>
             <TouchableHighlight
-              onPress={() => showClipboardActionSheet(item.assistant)}
+              onPress={() => showClipboardActionsheet(item.assistant)}
               underlayColor={'transparent'}
             >
               <View style={styles.optionsIconWrapper}>
@@ -188,13 +221,27 @@ export function Chat() {
               </View>
             </TouchableHighlight>
           </View>
-        )}
+        )
+      }
       </View>
-    );
+    )
   }
 
-  // Check if a call has been made to any chat type
-  const isChatCalled = openAIResponse.messages.length > 0;
+  const callMade = (() => {
+    if (chatType.label.includes('claude')) {
+      return claudeResponse.messages.length > 0
+    }
+    if (chatType.label.includes('cohere')) {
+      return cohereResponse.messages.length > 0
+    }
+    if (chatType.label.includes('mistral')) {
+      return mistralResponse.messages.length > 0
+    }
+    if (chatType.label.includes('gemini')) {
+      return geminiResponse.messages.length > 0
+    }
+    return openaiResponse.messages.length > 0
+  })()
 
   return (
     <KeyboardAvoidingView
@@ -203,79 +250,355 @@ export function Chat() {
       keyboardVerticalOffset={110}
     >
       <ScrollView
-        keyboardShouldPersistTaps="handled"
-        ref={scrollViewReference}
-        contentContainerStyle={!isChatCalled && styles.scrollContentContainer}
+        keyboardShouldPersistTaps='handled'
+        ref={scrollViewRef}
+        contentContainerStyle={!callMade && styles.scrollContentContainer}
       >
-        {!isChatCalled && (
-          <View style={styles.midChatInputWrapper}>
-            <View style={styles.midChatInputContainer}>
-              <TextInput
-                onChangeText={(text) => setUserInput(text)}
-                style={styles.midInput}
-                placeholder="Message"
-                placeholderTextColor={theme.placeholderTextColor}
-                autoCorrect={true}
-              />
-              <TouchableHighlight
-                onPress={handleChat}
-                underlayColor={'transparent'}
-              >
-                <View style={styles.midButtonStyle}>
-                  <Ionicons
-                    name="chatbox-ellipses-outline"
-                    size={22}
-                    color={theme.tintTextColor}
-                  />
-                  <Text style={styles.midButtonText}>
-                    Start {chatType.name} Chat
-                  </Text>
-                </View>
-              </TouchableHighlight>
-              <Text style={styles.chatDescription}>
-                Chat with a variety of different language models.
-              </Text>
+        {
+          !callMade && (
+            <View style={styles.midChatInputWrapper}>
+              <View style={styles.midChatInputContainer}>
+                
+                <TextInput
+                  onChangeText={v => setInput(v)}
+                  style={styles.midInput}
+                  placeholder='Message'
+                  placeholderTextColor={theme.placeholderTextColor}
+                  autoCorrect={true}
+                />
+                <TouchableHighlight
+                  onPress={chat}
+                  underlayColor={'transparent'}
+                >
+                  <View style={styles.midButtonStyle}>
+                    <Ionicons
+                      name="chatbox-ellipses-outline"
+                      size={22} color={theme.tintTextColor}
+                    />
+                    <Text style={styles.midButtonText}>
+                      Start {chatType.name} Chat
+                    </Text>
+                  </View>
+                </TouchableHighlight>
+                <Text style={styles.chatDescription}>
+                  Chat with a variety of different language models.
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
-        {isChatCalled && (
-          <FlatList
-            data={openAIResponse.messages}
-            renderItem={renderChatItem}
-            scrollEnabled={false}
-          />
-        )}
-        {isLoading && <ActivityIndicator style={styles.loadingContainer} />}
+          )
+        }
+        {
+          callMade && (
+            <>
+            {
+              chatType.label.includes('gpt') && (
+                <FlatList
+                  data={openaiResponse.messages}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                />
+              )
+            }
+            {
+              chatType.label.includes('claude') && (
+                <FlatList
+                  data={claudeResponse.messages}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                />
+              )
+            }
+            {
+              chatType.label.includes('cohere') && (
+                <FlatList
+                  data={cohereResponse.messages}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                />
+              )
+            }
+            {
+              chatType.label.includes('mistral') && (
+                <FlatList
+                  data={mistralResponse.messages}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                />
+              )
+            }
+            {
+              chatType.label.includes('gemini') && (
+                <FlatList
+                  data={geminiResponse.messages}
+                  renderItem={renderItem}
+                  scrollEnabled={false}
+                />
+              )
+            }
+            </>
+          )
+        }
+        {
+          loading && (
+            <ActivityIndicator style={styles.loadingContainer} />
+          )
+        }
       </ScrollView>
-      {isChatCalled && (
-        <View style={styles.chatInputContainer}>
-          <TextInput
-            style={styles.input}
-            onChangeText={(text) => setUserInput(text)}
-            placeholder="Message"
-            placeholderTextColor={theme.placeholderTextColor}
-            value={userInput}
-          />
-          <TouchableHighlight
-            underlayColor={'transparent'}
-            activeOpacity={0.65}
-            onPress={handleChat}
-          >
-            <View style={styles.chatButton}>
-              <Ionicons
-                name="md-arrow-up"
-                size={20}
-                color={theme.tintTextColor}
-              />
-            </View>
-          </TouchableHighlight>
-        </View>
-      )}
+      {
+        callMade && (
+          <View
+              style={styles.chatInputContainer}
+            >
+            <TextInput
+              style={styles.input}
+              onChangeText={v => setInput(v)}
+              placeholder='Message'
+              placeholderTextColor={theme.placeholderTextColor}
+              value={input}
+            />
+            <TouchableHighlight
+              underlayColor={'transparent'}
+              activeOpacity={0.65}
+              onPress={chat}
+            >
+              <View
+                style={styles.chatButton}
+              >
+                <Ionicons
+                  name="md-arrow-up"
+                  size={20} color={theme.tintTextColor}
+                />
+              </View>
+            </TouchableHighlight>
+          </View>
+        )
+      }
     </KeyboardAvoidingView>
-  );
+  )
 }
 
-const getStyles = (theme: any) =>
-  StyleSheet.create({
-    // ... (styles remain the same)
-  } as any);
+const getStyles = (theme: any) => StyleSheet.create({
+  optionsIconWrapper: {
+    padding: 10,
+    paddingTop: 9,
+    alignItems: 'flex-end'
+  },
+  scrollContentContainer: {
+    flex: 1,
+  },
+  chatDescription: {
+    color: theme.textColor,
+    textAlign: 'center',
+    marginTop: 15,
+    fontSize: 13,
+    paddingHorizontal: 34,
+    opacity: .8,
+    fontFamily: theme.regularFont
+  },
+  midInput: {
+    marginBottom: 8,
+    borderWidth: 1,
+    paddingHorizontal: 25,
+    marginHorizontal: 10,
+    paddingVertical: 15,
+    borderRadius: 99,
+    color: theme.textColor,
+    borderColor: theme.borderColor,
+    fontFamily: theme.mediumFont,
+  },
+  midButtonStyle: {
+    flexDirection: 'row',
+    marginHorizontal: 14,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderRadius: 99,
+    backgroundColor: theme.tintColor,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  midButtonText: {
+    color: theme.tintTextColor,
+    marginLeft: 10,
+    fontFamily: theme.boldFont,
+    fontSize: 16
+  },
+  midChatInputWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  midChatInputContainer: {
+    width: '100%',
+    paddingTop: 5,
+    paddingBottom: 5
+  },
+  loadingContainer: {
+    marginTop: 25
+  },
+  promptResponse: {
+    marginTop: 10,
+  },
+  textStyleContainer: {
+    borderWidth: 1,
+    marginRight: 25,
+    borderColor: theme.borderColor,
+    padding: 15,
+    paddingBottom: 6,
+    paddingTop: 5,
+    margin: 10,
+    borderRadius: 13
+  },
+  promptTextContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    marginRight: 15,
+    marginLeft: 24,
+  },
+  promptTextWrapper: {
+    borderRadius: 8,
+    borderTopRightRadius: 0,
+    backgroundColor: theme.tintColor,
+  },
+  promptText: {
+    color: theme.tintTextColor,
+    fontFamily: theme.regularFont,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    fontSize: 16
+  },
+  chatButton: {
+    marginRight: 14,
+    padding: 5,
+    borderRadius: 99,
+    backgroundColor: theme.tintColor
+  },
+  chatInputContainer: {
+    paddingTop: 5,
+    borderColor: theme.borderColor,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 5
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 99,
+    color: theme.textColor,
+    marginHorizontal: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 21,
+    paddingRight: 39,
+    borderColor: theme.borderColor,
+    fontFamily: theme.semiBoldFont,
+  },
+  container: {
+    backgroundColor: theme.backgroundColor,
+    flex: 1
+  },
+  markdownStyle: {
+    body: {
+      color: theme.textColor,
+      fontFamily: theme.regularFont
+    },
+    paragraph: {
+      color: theme.textColor,
+      fontSize: 16,
+      fontFamily: theme.regularFont
+    },
+    heading1: {
+      color: theme.textColor,
+      fontFamily: theme.semiBoldFont,
+      marginVertical: 5
+    },
+    heading2: {
+      marginTop: 20,
+      color: theme.textColor,
+      fontFamily: theme.semiBoldFont,
+      marginBottom: 5
+    },
+    heading3: {
+      marginTop: 20,
+      color: theme.textColor,
+      fontFamily: theme.mediumFont,
+      marginBottom: 5
+    },
+    heading4: {
+      marginTop: 10,
+      color: theme.textColor,
+      fontFamily: theme.mediumFont,
+      marginBottom: 5
+    },
+    heading5: {
+      marginTop: 10,
+      color: theme.textColor,
+      fontFamily: theme.mediumFont,
+      marginBottom: 5
+    },
+    heading6: {
+      color: theme.textColor,
+      fontFamily: theme.mediumFont,
+      marginVertical: 5
+    },
+    list_item: {
+      marginTop: 7,
+      color: theme.textColor,
+      fontFamily: theme.regularFont,
+      fontSize: 16,
+    },
+    ordered_list_icon: {
+      color: theme.textColor,
+      fontSize: 16,
+      fontFamily: theme.regularFont
+    },
+    bullet_list: {
+      marginTop: 10
+    },
+    ordered_list: {
+      marginTop: 7
+    },
+    bullet_list_icon: {
+      color: theme.textColor,
+      fontSize: 16,
+      fontFamily: theme.regularFont
+    },
+    code_inline: {
+      color: theme.secondaryTextColor,
+      backgroundColor: theme.secondaryBackgroundColor,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, .1)',
+      fontFamily: theme.lightFont
+    },
+    hr: {
+      backgroundColor: 'rgba(255, 255, 255, .1)',
+      height: 1,
+    },
+    fence: {
+      marginVertical: 5,
+      padding: 10,
+      color: theme.secondaryTextColor,
+      backgroundColor: theme.secondaryBackgroundColor,
+      borderColor: 'rgba(255, 255, 255, .1)',
+      fontFamily: theme.regularFont
+    },
+    tr: {
+      borderBottomWidth: 1,
+      borderColor: 'rgba(255, 255, 255, .2)',
+      flexDirection: 'row',
+    },
+    table: {
+      marginTop: 7,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, .2)',
+      borderRadius: 3,
+    },
+    blockquote: {
+      backgroundColor: '#312e2e',
+      borderColor: '#CCC',
+      borderLeftWidth: 4,
+      marginLeft: 5,
+      paddingHorizontal: 5,
+      marginVertical: 5,
+    },
+  } as any,
+})
