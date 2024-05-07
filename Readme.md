@@ -94,4 +94,3 @@ if (response.body?.contentType()?.type == "text" && response.body?.contentType()
 }
 ```
 
-This refined README provides a clearer structure, improves the formatting, and makes the setup instructions more concise and easier to follow. The Android-specific instructions are now separated for better readability.
