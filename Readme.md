@@ -1,5 +1,3 @@
-Here's a refined version of the README:
-
 # React AI App
 
 React playground for AI models with streaming capabilities and production-ready setup.
