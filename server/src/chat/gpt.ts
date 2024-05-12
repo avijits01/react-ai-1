@@ -28,7 +28,7 @@ export const gpt = asyncHandler(async (req: Request, res: Response) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`
       },
       body: JSON.stringify({
         model: modelMapping[model],
@@ -36,6 +36,16 @@ export const gpt = asyncHandler(async (req: Request, res: Response) => {
         stream: true
       })
     });
+
+    // Check if the response status indicates an error
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('Error response from OpenAI:', response.status, errorBody);
+      res.write(`data: {"error": "Error response from OpenAI: ${response.status}"}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
 
     console.log('Response status:', response.status);
 
@@ -64,35 +74,40 @@ export const gpt = asyncHandler(async (req: Request, res: Response) => {
           }
         }
 
-        const lines = chunk.split("data: ")
+        const lines = chunk.split("data: ");
         const parsedLines = lines
           .filter(line => line !== "" && line !== "[DONE]")
           .filter(l => {
             try {
-              JSON.parse(l)
-              return true
+              JSON.parse(l);
+              return true;
             } catch (err) {
-              console.log('line thats not json:', l)
-              if (!l.includes('[DONE]'))  {
-                partialLine = partialLine + l
+              console.log('Line that’s not JSON:', l);
+              if (!l.includes('[DONE]')) {
+                partialLine = partialLine + l;
               }
-              return false
-            } 
-          })
-          .map(l => JSON.parse(l))
-          for (const parsedLine of parsedLines) {
-            const { choices } = parsedLine
-            const { delta } = choices[0]
-            const { content } = delta
-            if (content) {
-              res.write(`data: ${JSON.stringify(delta)}\n\n`)
+              return false;
             }
+          })
+          .map(l => JSON.parse(l));
+        
+        for (const parsedLine of parsedLines) {
+          const { choices } = parsedLine;
+          const { delta } = choices[0];
+          const { content } = delta;
+          if (content) {
+            res.write(`data: ${JSON.stringify(delta)}\n\n`);
           }
+        }
       }
     }
 
     res.write('data: [DONE]\n\n');
+    res.end();
   } catch (err) {
     console.error('Error:', err);
+    res.write('data: {"error": "An internal server error occurred."}\n\n');
+    res.write('data: [DONE]\n\n');
+    res.end();
   }
 });

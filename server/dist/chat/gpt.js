@@ -28,7 +28,7 @@ exports.gpt = (0, express_async_handler_1.default)(async (req, res) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY || ''}`
             },
             body: JSON.stringify({
                 model: modelMapping[model],
@@ -36,6 +36,15 @@ exports.gpt = (0, express_async_handler_1.default)(async (req, res) => {
                 stream: true
             })
         });
+        // Check if the response status indicates an error
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('Error response from OpenAI:', response.status, errorBody);
+            res.write(`data: {"error": "Error response from OpenAI: ${response.status}"}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+        }
         console.log('Response status:', response.status);
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
@@ -69,7 +78,7 @@ exports.gpt = (0, express_async_handler_1.default)(async (req, res) => {
                         return true;
                     }
                     catch (err) {
-                        console.log('line thats not json:', l);
+                        console.log('Line that’s not JSON:', l);
                         if (!l.includes('[DONE]')) {
                             partialLine = partialLine + l;
                         }
@@ -88,8 +97,12 @@ exports.gpt = (0, express_async_handler_1.default)(async (req, res) => {
             }
         }
         res.write('data: [DONE]\n\n');
+        res.end();
     }
     catch (err) {
         console.error('Error:', err);
+        res.write('data: {"error": "An internal server error occurred."}\n\n');
+        res.write('data: [DONE]\n\n');
+        res.end();
     }
 });
