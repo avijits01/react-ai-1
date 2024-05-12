@@ -3,15 +3,15 @@ import EventSource from 'react-native-sse';
 import { Model } from '../types';
 
 // Function to create an EventSource instance for server-sent events
-export function getEventSource({ headers, body, type }: { headers?: any, body: any, type: string }) {
+export function getEventSource({ body, type }: { body: any, type: string }) {
   const es = new EventSource(`${DOMAIN}/chat/${type}`, {
     headers: {
       'Content-Type': 'application/json',
-      ...headers,
     },
     method: 'POST',
     body: JSON.stringify(body),
   });
+  console.log('EventSource', body,type);
   return es;
 }
 
@@ -25,17 +25,18 @@ export function getFirstN({ messages, size = 10 }: { size?: number, messages: an
   return messages.length > size ? messages.slice(0, size) : messages;
 }
 
-// Function to determine the chat type based on the model label
 export function getChatType(type: Model) {
   if (type.label.includes('gpt')) {
-    return 'gpt';
-  } else if (type.label.includes('cohere')) {
-    return 'cohere';
-  } else if (type.label.includes('mistral')) {
-    return 'mistral';
-  } else if (type.label.includes('gemini')) {
-    return 'gemini';
-  } else {
-    return 'claude';
+    return 'gpt'
   }
+  if (type.label.includes('cohere')) {
+    return 'cohere'
+  }
+  if (type.label.includes('mistral')) {
+    return 'mistral'
+  }
+  if (type.label.includes('gemini')) {
+    return 'gemini'
+  }
+  else return 'claude'
 }

@@ -44,20 +44,6 @@ export function Chat() {
     index: uuid()
   })
 
-  // cohere state management
-  const [cohereResponse, setCohereResponse] = useState({
-    messages: [],
-    index: uuid()
-  })
-
-  // mistral state management
-  const [mistralAPIMessages, setMistralAPIMessages] = useState('')
-  const [mistralResponse, setMistralResponse] = useState({
-    messages: [],
-    index: uuid()
-  })
-
-
   // Gemini state management
   const [geminiAPIMessages, setGeminiAPIMessages] = useState('')
   const [geminiResponse, setGeminiResponse] = useState({
@@ -71,9 +57,165 @@ export function Chat() {
 
 
   async function chat() {
-    if (!input) return;
-    Keyboard.dismiss();
-    generateOpenaiResponse();
+    if (!input) return
+    Keyboard.dismiss()
+    if (chatType.label.includes('claude')) {
+      generateClaudeResponse()
+    } else if (chatType.label.includes('gemini')) {
+      generateGeminiResponse()
+    }
+    else {
+      generateOpenaiResponse()
+    }
+  }
+  async function generateClaudeResponse() {
+    if (!input) return
+    Keyboard.dismiss()
+    let localResponse = ''
+    const claudeInput = `${claudeAPIMessages}\n\nHuman: ${input}\n\nAssistant:`
+
+    let claudeArray = [
+      ...claudeResponse.messages, {
+        user: input,
+      }
+    ] as [{user: string, assistant?: string}]
+
+    setClaudeResponse(c => ({
+      index: c.index,
+      messages: JSON.parse(JSON.stringify(claudeArray))
+    }))
+
+    setLoading(true)
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({
+        animated: true
+      })
+    }, 1)
+    setInput('')
+
+    const eventSourceArgs = {
+      body: {
+        prompt: claudeInput,
+        model: chatType.label
+      },
+      type: getChatType(chatType),
+    }
+
+    const es = await getEventSource(eventSourceArgs)
+
+    const listener = (event) => {
+      if (event.type === "open") {
+        console.log("Open SSE connection.")
+        setLoading(false)
+      } else if (event.type === "message") {
+        if (event.data !== "[DONE]") {
+          if (localResponse.length < 850) {
+            scrollViewRef.current?.scrollToEnd({
+              animated: true
+            })
+          }
+          const data = event.data
+          localResponse = localResponse + JSON.parse(data).completion
+          claudeArray[claudeArray.length - 1].assistant = localResponse
+          setClaudeResponse(c => ({
+            index: c.index,
+            messages: JSON.parse(JSON.stringify(claudeArray))
+          }))
+        } else {
+          setLoading(false)
+          setClaudeAPIMessages(
+            `${claudeAPIMessages}\n\nHuman: ${input}\n\nAssistant:${getFirstNCharsOrLess(localResponse, 2000)}`
+          )
+          es.close()
+        }
+      } else if (event.type === "error") {
+        console.error("Connection error:", event.message)
+        setLoading(false)
+      } else if (event.type === "exception") {
+        console.error("Error:", event.message, event.error)
+        setLoading(false)
+      }
+    }
+    es.addEventListener("open", listener)
+    es.addEventListener("message", listener)
+    es.addEventListener("error", listener)
+  }
+
+
+  async function generateGeminiResponse() {
+    if (!input) return
+    Keyboard.dismiss()
+    let localResponse = ''
+    const geminiInput = `${input}`
+
+    let geminiArray = [
+      ...geminiResponse.messages, {
+        user: input,
+      }
+    ] as [{user: string, assistant?: string}]
+
+    setGeminiResponse(c => ({
+      index: c.index,
+      messages: JSON.parse(JSON.stringify(geminiArray))
+    }))
+
+    setLoading(true)
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({
+        animated: true
+      })
+    }, 1)
+    setInput('')
+
+    const eventSourceArgs = {
+      body: {
+        prompt: geminiInput,
+        model: chatType.label
+      },
+      type: getChatType(chatType)
+    }
+
+    const es = await getEventSource(eventSourceArgs)
+
+   
+    const listener = (event) => {
+      if (event.type === "open") {
+        console.log("Open SSE connection.")
+        setLoading(false)
+      } else if (event.type === "message") {
+        if (event.data !== "[DONE]") {
+          if (localResponse.length < 850) {
+            scrollViewRef.current?.scrollToEnd({
+              animated: true
+            })
+          }
+        
+          const data = event.data
+          localResponse = localResponse + JSON.parse(data)
+          geminiArray[geminiArray.length - 1].assistant = localResponse
+          setGeminiResponse(c => ({
+            index: c.index,
+            messages: JSON.parse(JSON.stringify(geminiArray))
+          }))
+        } else {
+          setLoading(false)
+          setGeminiAPIMessages(
+            `${geminiAPIMessages}\n\nPrompt: ${input}\n\nResponse:${localResponse}`
+          )
+          es.close()
+        }
+      } else if (event.type === "error") {
+        console.error("Connection error:", event.message)
+        setLoading(false)
+      } else if (event.type === "exception") {
+        console.error("Error:", event.message, event.error)
+        setLoading(false)
+      }
+    }
+   
+    es.addEventListener("open", listener);
+    es.addEventListener("message", listener);
+    es.addEventListener("error", listener);
   }
 
   async function generateOpenaiResponse() {
@@ -119,7 +261,6 @@ export function Chat() {
       }
       setInput('')
       const eventSource = getEventSource(eventSourceArgs)
-// admskl
       console.log('about to open listener...')
       const listener = (event:any) => {
         console.log('event: ', event)
@@ -231,12 +372,6 @@ export function Chat() {
     if (chatType.label.includes('claude')) {
       return claudeResponse.messages.length > 0
     }
-    if (chatType.label.includes('cohere')) {
-      return cohereResponse.messages.length > 0
-    }
-    if (chatType.label.includes('mistral')) {
-      return mistralResponse.messages.length > 0
-    }
     if (chatType.label.includes('gemini')) {
       return geminiResponse.messages.length > 0
     }
@@ -308,33 +443,7 @@ export function Chat() {
                 />
               )
             }
-            {
-              chatType.label.includes('cohere') && (
-                <FlatList
-                  data={cohereResponse.messages}
-                  renderItem={renderItem}
-                  scrollEnabled={false}
-                />
-              )
-            }
-            {
-              chatType.label.includes('mistral') && (
-                <FlatList
-                  data={mistralResponse.messages}
-                  renderItem={renderItem}
-                  scrollEnabled={false}
-                />
-              )
-            }
-            {
-              chatType.label.includes('gemini') && (
-                <FlatList
-                  data={geminiResponse.messages}
-                  renderItem={renderItem}
-                  scrollEnabled={false}
-                />
-              )
-            }
+
             </>
           )
         }
