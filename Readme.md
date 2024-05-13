@@ -92,3 +92,46 @@ if (response.body?.contentType()?.type == "text" && response.body?.contentType()
 }
 ```
 
+For detailed information on fixing the Flipper interference in developer mode and modifying the Expo request interceptor for event streams, please refer to the following GitHub issue:
+- [Fix Flipper Interference in Developer Mode and Modify Expo Request Interceptor for Event Streams](https://github.com/avijits01/react-ai-1/issues/3)
+
+## Adding a New AI Model
+
+Follow these steps to add a new AI model:
+
+Server-Side:
+
+Create a new file in server/src/chat with your model's implementation.
+Use HTTP or SDK as per your model's API.
+Test the new route in Postman. 
+
+Client-Side:
+
+In chat.tsx (located in client/src/screens), perform the following:
+State Management: Add states for messages and responses.
+Function: Implement a function to handle event streams and responses similar to existing models (e.g., GPT).
+
+## Adding a new Theme
+
+Follow these steps to add a new Theme:
+
+To add a new theme, open app/src/theme.ts and add a new theme with the following configuration:
+
+```javascript
+const newTheme = {
+  // extend an existing theme or start from scratch
+  ...lightTheme,
+  name: 'newTheme',
+  label: 'newTheme',
+  tintColor: '#ff0000',
+  textColor: '#378b29',
+  tabBarActiveTintColor: '#378b29',
+  tabBarInactiveTintColor: '#ff0000',
+  placeholderTextColor: '#378b29',
+}
+```
+At the bottom of the file, export the new theme:
+
+export {
+  lightTheme, darkTheme, hackerNews, miami, vercel, newTheme
+}
