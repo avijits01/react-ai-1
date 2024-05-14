@@ -1,4 +1,4 @@
 ## Attribution
 
-Portions of this code mainly the frontend were adapted from a Udemy course by Reece Kenney and egghead.io course by Nader Dabit. All rights belong to the original author.
+The frontend design (stylesheets) of this code were adapted from a Udemy course by Reece Kenney and egghead.io course by Nader Dabit. All rights belong to the original author.
 
