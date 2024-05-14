@@ -101,15 +101,36 @@ Follow these steps to add a new AI model:
 
 Server-Side:
 
-Create a new file in server/src/chat with your model's implementation.
-Use HTTP or SDK as per your model's API.
-Test the new route in Postman. 
+1. Create a new file in server/src/chat with your model's implementation.
+
+2. Use HTTP or SDK as per your model's API.
+
+3. Test the new route in Postman. 
 
 Client-Side:
 
-In chat.tsx (located in client/src/screens), perform the following:
-State Management: Add states for messages and responses.
-Function: Implement a function to handle event streams and responses similar to existing models (e.g., GPT).
+1. Create a Custom Hook for the New Model:
+
+   Create a new hook file similar to useGPT. For example, if the new model is called "Gemini", create useGemini.ts.
+   In the hook make sure your type of messages and responses are similar to the GPTmessages and GPTResponse types.
+
+2. Update Chat.tsx to Use the New Hook
+
+```typescript
+import useGemini from '../hooks/useGemini';
+// other imports...
+
+
+  // Use the appropriate hook based on chatType
+  const gptHooks = {
+    gpt: useGPT,
+    gemini: useGemini,
+    // add other hooks as needed
+  };
+
+  const { loading, input, messages, setInput, generateResponse, setMessages, scrollViewRef } = gptHooks[chatType.label](chatType);
+
+```
 
 ## Adding a new Theme
 
