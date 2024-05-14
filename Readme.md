@@ -13,6 +13,11 @@ React playground for AI models with streaming capabilities and production-ready 
 
 Follow these steps to set up the project:
 
+### OpenAI API Key
+
+The application requires an **OpenAI API Key** to function properly, the rest of the keys are optional. You can obtain it by signing up or logging into your account at [OpenAI's API platform](https://openai.com/api/). Include the key in .env as demonstrated below.
+
+
 1. In the `server` folder, create a `.env` file with the following content:
 
 ```bash
