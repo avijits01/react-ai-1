@@ -42,6 +42,7 @@ export function Chat() {
     generateResponse,
     setMessages,
     scrollViewRef,
+    error
   } = useModelHook(chatType);
 
   // Function to handle sending a chat message
@@ -152,6 +153,9 @@ export function Chat() {
               <Text style={styles.chatDescription}>
                 Chat with a variety of different language models.
               </Text>
+              {error && (
+                <Text style={styles.errorText}>{error}</Text>
+              )}
             </View>
           </View>
         )}
@@ -161,6 +165,9 @@ export function Chat() {
             renderItem={renderItem}
             scrollEnabled={false}
           />
+        )}
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
         )}
         {loading && <ActivityIndicator style={styles.loadingContainer} />}
       </ScrollView>
@@ -418,4 +425,11 @@ const getStyles = (theme: any) =>
         marginVertical: 5,
       },
     } as any,
+    errorText: {
+      color: 'red',
+      textAlign: 'center',
+      marginTop: 10,
+      fontSize: 14,
+      paddingHorizontal: 20,
+    },
   });

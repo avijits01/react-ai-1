@@ -23,6 +23,8 @@ const useGPT = (chatType) => {
   });
   // Reference to the scroll view
   const scrollViewRef = useRef<ScrollView | null>(null);
+  // State to manage error
+  const [error, setError] = useState<string | null>(null);
 
   // Function to generate a response from the model
   const generateResponse = useCallback(async () => {
@@ -67,17 +69,25 @@ const useGPT = (chatType) => {
       setLoading(false);
     });
 
+    console.log("eventSource", eventSource);
+
     // Event listener for message event
     eventSource.addEventListener("message", (event) => {
       if (event.data !== "[DONE]") {
         // Check if event.data is not null
         if (event.data) {
-          const localResponse =
-            newMessages[newMessages.length - 1].assistant +
-            JSON.parse(event.data).content;
-          newMessages[newMessages.length - 1].assistant = localResponse;
-          setResponse({ index: response.index, messages: [...newMessages] });
-          scrollViewRef.current?.scrollToEnd({ animated: true });
+          const data = JSON.parse(event.data);
+          if (data.error) {
+            setError(data.error);
+            setLoading(false);
+            eventSource.close();
+          } else {
+            const localResponse =
+              newMessages[newMessages.length - 1].assistant + data.content;
+            newMessages[newMessages.length - 1].assistant = localResponse;
+            setResponse({ index: response.index, messages: [...newMessages] });
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }
         }
       } else {
         setLoading(false);
@@ -105,6 +115,7 @@ const useGPT = (chatType) => {
     generateResponse,
     setMessages,
     scrollViewRef,
+    error,
   };
 };
 
