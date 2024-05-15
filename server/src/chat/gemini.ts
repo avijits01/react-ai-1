@@ -1,3 +1,5 @@
+// Description: This file defines the chat handler for the Claude model.
+// Not used right now, but can be used to add support for the Claude model in the future.
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 import { Request, Response } from "express"

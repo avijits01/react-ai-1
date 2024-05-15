@@ -30,10 +30,9 @@ const useGPT = (chatType) => {
   const generateResponse = useCallback(async () => {
     // Return early if there is no input
     if (!input) return;
-    // Dismiss the keyboard
     Keyboard.dismiss();
-    // Set loading state to true
     setLoading(true);
+    setError(null);
 
     // Prepare the message request payload
     let messagesRequest = getFirstN({ messages });
@@ -69,7 +68,7 @@ const useGPT = (chatType) => {
       setLoading(false);
     });
 
-    console.log("eventSource", eventSource);
+    
 
     // Event listener for message event
     eventSource.addEventListener("message", (event) => {
@@ -113,7 +112,7 @@ const useGPT = (chatType) => {
     messages: response.messages,
     setInput,
     generateResponse,
-    setMessages,
+    setResponse,
     scrollViewRef,
     error,
   };

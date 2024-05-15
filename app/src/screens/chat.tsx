@@ -11,8 +11,8 @@ import {
   Keyboard,
 } from "react-native";
 import "react-native-get-random-values";
-import { useContext } from "react";
-import { ThemeContext, AppContext } from "../context";
+import { useContext, useEffect } from "react";
+import { ThemeContext, AppContext } from "../context" ;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Clipboard from "expo-clipboard";
 import { useActionSheet } from "@expo/react-native-action-sheet";
@@ -24,6 +24,7 @@ const modelHooks = {
   gpt: useGPT
   // Add other models here
 };
+
 
 export function Chat() {
   // Hooks for action sheet and context
@@ -40,7 +41,7 @@ export function Chat() {
     messages,
     setInput,
     generateResponse,
-    setMessages,
+    setResponse,
     scrollViewRef,
     error
   } = useModelHook(chatType);
@@ -80,9 +81,8 @@ export function Chat() {
   async function clearChat() {
     if (loading) return;
     setInput("");
-    setMessages([]);
+    setResponse({ messages: [] });
   }
-
   // Function to render chat messages
   function renderItem({ item, index }: { item: any; index: number }) {
     return (

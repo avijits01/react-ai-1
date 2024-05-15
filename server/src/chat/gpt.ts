@@ -1,3 +1,6 @@
+// Description: This file defines the GPT endpoint for the chat API.
+// Request: {messages: Array<{role: string, content: string}>, model: string}
+// Response: Server-Sent Events (SSE) stream of messages with the following format: {messages: Array<{content: string, role: string}>, model: string}
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 
