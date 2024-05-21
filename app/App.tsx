@@ -21,18 +21,24 @@ import { StyleSheet } from "react-native";
 import LogBox from "react-native/Libraries/LogBox/LogBox";
 
 // @ts-ignore
+// Specific logbox warnings to ignore
 LogBox.ignoreLogs([
   'Key "cancelled" in the image picker result is deprecated and will be removed in SDK 48, use "canceled" instead',
   "No native splash screen registered",
 ]);
 
 export default function App() {
+  // State for theme management
   const [theme, setTheme] = useState<string>("light");
+  // State for chat type management
   const [chatType, setChatType] = useState<Model>(MODELS.gptTurbo);
+  // State for image model management
   const [imageModel, setImageModel] = useState<string>(
     IMAGE_MODELS.fastImage.label
   );
+  // State for modal visibility
   const [modalVisible, setModalVisible] = useState<boolean>(false);
+  // Load custom fonts
   const [fontsLoaded] = useFonts({
     "Geist-Regular": require("./assets/fonts/Geist-Regular.otf"),
     "Geist-Light": require("./assets/fonts/Geist-Light.otf"),
@@ -45,10 +51,12 @@ export default function App() {
     "Geist-UltraBlack": require("./assets/fonts/Geist-UltraBlack.otf"),
   });
 
+  // Configure persistent storage on component mount
   useEffect(() => {
     configureStorage();
   }, []);
 
+  // Fetch and set stored preferences (theme, chatType, imageModel) from AsyncStorage
   async function configureStorage() {
     try {
       const _theme = await AsyncStorage.getItem("rnai-theme");
@@ -61,14 +69,19 @@ export default function App() {
       console.log("error configuring storage", err);
     }
   }
-  console.log("theme", theme);
 
+  // Reference to the bottom sheet modal
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  // Close the bottom sheet modal
+  // todo : use useCallback to memoize the function to prevent re-creation on every render
   function closeModal() {
     bottomSheetModalRef.current?.dismiss();
     setModalVisible(false);
   }
 
+  // Toggle the bottom sheet modal visibility
+  // todo : use useCallback to memoize the function to prevent re-creation on every render. On an empty dependency array, the function will be created only once.
   function handlePresentModalPress() {
     if (modalVisible) {
       closeModal();
@@ -78,23 +91,29 @@ export default function App() {
     }
   }
 
+  // Set the chat type and persist to AsyncStorage
+  // todo : use useCallback to memoize the function to prevent re-creation on every render
   function _setChatType(type) {
     setChatType(type);
     AsyncStorage.setItem("rnai-chatType", JSON.stringify(type));
   }
 
+  // Set the image model and persist to AsyncStorage
   function _setImageModel(model) {
     setImageModel(model);
     AsyncStorage.setItem("rnai-imageModel", model);
   }
 
+  // Set the theme and persist to AsyncStorage
   function _setTheme(theme) {
     setTheme(theme);
     AsyncStorage.setItem("rnai-theme", theme);
   }
 
+  // Get styles for the bottom sheet modal
   const bottomSheetStyles = getBottomsheetStyles(theme);
 
+  // Render the app when fonts are loaded
   if (!fontsLoaded) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -118,7 +137,6 @@ export default function App() {
           <ActionSheetProvider>
             <NavigationContainer>
               <Main />
-              {/* Navigation state*/}
             </NavigationContainer>
           </ActionSheetProvider>
           <BottomSheetModalProvider>
@@ -148,6 +166,7 @@ export default function App() {
   );
 }
 
+// Function to get bottom sheet styles based on the current theme
 const getBottomsheetStyles = (theme) =>
   StyleSheet.create({
     background: {
@@ -165,6 +184,7 @@ const getBottomsheetStyles = (theme) =>
     },
   });
 
+// Function to get the current theme object
 function getTheme(theme: any) {
   let current;
   Object.keys(themes).forEach((_theme) => {

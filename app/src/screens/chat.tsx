@@ -11,7 +11,7 @@ import {
   Keyboard,
 } from "react-native";
 import "react-native-get-random-values";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useCallback, useMemo } from "react";
 import { ThemeContext, AppContext } from "../context" ;
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Clipboard from "expo-clipboard";
@@ -27,14 +27,23 @@ const modelHooks = {
 
 
 export function Chat() {
-  // Hooks for action sheet and context
+  // Use action sheet from expo
   const { showActionSheetWithOptions } = useActionSheet();
+  // Get the current theme context
   const { theme } = useContext(ThemeContext);
+  // Get the current chat type context
   const { chatType } = useContext(AppContext);
-  const styles = getStyles(theme);
+
+  // Get styles based on the theme
+  // useMemo to memoize styles based on theme to avoid recalculating styles on every render
+  const styles = useMemo(() => getStyles(theme), [theme]);
+
 
   // Get the appropriate hook based on chatType
-  const useModelHook = modelHooks[chatType.label] || useGPT;
+  // useMemo to memoize the model hook based on chatType to avoid recalculating the hook on every render
+  const useModelHook = useMemo(() => modelHooks[chatType.label] || useGPT, [chatType]);
+
+  // Destructure values from the hook
   const {
     loading,
     input,
@@ -43,23 +52,39 @@ export function Chat() {
     generateResponse,
     setResponse,
     scrollViewRef,
-    error
+    error,
   } = useModelHook(chatType);
 
-  // Function to handle sending a chat message
-  async function chat() {
-    if (!input) return;
-    Keyboard.dismiss();
-    generateResponse();
-  }
+  // Handle sending a chat message
+  // useCallback to prevent re-creation of the function unless input or generateResponse changes
+  const chat = useCallback(async () => {
+    if (!input) return; // Prevent sending empty messages
+    Keyboard.dismiss(); // Dismiss the keyboard
+    console.log("Creating chat message");
+    generateResponse(); // Generate response from the model
+  }, [input, generateResponse]);
 
-  // Function to copy text to clipboard
-  async function copyToClipboard(text) {
+
+  // Copy text to clipboard
+  // useCallback ensures the function is only declared once
+  const copyToClipboard = useCallback(async (text) => {
     await Clipboard.setStringAsync(text);
-  }
+  }, []);
 
-  // Function to show action sheet for clipboard actions
-  async function showClipboardActionsheet(text) {
+
+
+  // Clear chat messages
+  // useCallback to prevent re-creation of the function unless loading changes
+  const clearChat = useCallback(async () => {
+    if (loading) return; // Prevent clearing if loading
+    setInput(""); // Reset input state
+    setResponse({ messages: [] }); // Clear response messages
+  }, [loading]);
+
+
+  // Show action sheet for clipboard actions
+  // can be refactored: ChatMessages component for rendering chat messages
+  const showClipboardActionsheet = useCallback(async (text) => {
     const cancelButtonIndex = 2;
     showActionSheetWithOptions(
       {
@@ -75,41 +100,35 @@ export function Chat() {
         }
       }
     );
-  }
+  }, [copyToClipboard, showActionSheetWithOptions, clearChat]);
 
-  // Function to clear chat messages
-  async function clearChat() {
-    if (loading) return;
-    setInput("");
-    setResponse({ messages: [] });
-  }
-  // Function to render chat messages
-  function renderItem({ item, index }: { item: any; index: number }) {
-    return (
-      <View style={styles.promptResponse} key={index}>
-        <View style={styles.promptTextContainer}>
-          <View style={styles.promptTextWrapper}>
-            <Text style={styles.promptText}>{item.user}</Text>
-          </View>
+  // Render chat messages
+  // can be refactored: ChatMessages component for rendering chat messages
+  const renderItem = useCallback(({ item, index }) => (
+    <View style={styles.promptResponse} key={index}>
+      <View style={styles.promptTextContainer}>
+        <View style={styles.promptTextWrapper}>
+          <Text style={styles.promptText}>{item.user}</Text>
         </View>
-        {item.assistant && (
-          <View style={styles.textStyleContainer}>
-            <Markdown style={styles.markdownStyle as any}>
-              {item.assistant}
-            </Markdown>
-            <TouchableHighlight
-              onPress={() => showClipboardActionsheet(item.assistant)}
-              underlayColor={"transparent"}
-            >
-              <View style={styles.optionsIconWrapper}>
-                <Ionicons name="apps" size={20} color={theme.textColor} />
-              </View>
-            </TouchableHighlight>
-          </View>
-        )}
       </View>
-    );
-  }
+      {item.assistant && (
+        <View style={styles.textStyleContainer}>
+          <Markdown style={styles.markdownStyle as any}>
+            {item.assistant}
+          </Markdown>
+          <TouchableHighlight
+            onPress={() => showClipboardActionsheet(item.assistant)}
+            underlayColor={"transparent"}
+          >
+            <View style={styles.optionsIconWrapper}>
+              <Ionicons name="apps" size={20} color={theme.textColor} />
+            </View>
+          </TouchableHighlight>
+        </View>
+      )}
+    </View>
+  ), [styles, showClipboardActionsheet, theme.textColor]);
+
 
   return (
     <KeyboardAvoidingView
@@ -136,7 +155,7 @@ export function Chat() {
                 value={input}
               />
               <TouchableHighlight
-                onPress={generateResponse}
+                onPress={chat}
                 underlayColor={"transparent"}
               >
                 <View style={styles.midButtonStyle}>
@@ -183,7 +202,7 @@ export function Chat() {
           <TouchableHighlight
             underlayColor={"transparent"}
             activeOpacity={0.65}
-            onPress={generateResponse}
+            onPress={chat}
           >
             <View style={styles.chatButton}>
               <Ionicons

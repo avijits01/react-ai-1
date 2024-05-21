@@ -7,7 +7,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
-import { useContext } from "react";
+import { useContext, useMemo, useCallback } from "react";
 import { AppContext, ThemeContext } from "../context";
 import {
   AnthropicIcon,
@@ -30,13 +30,20 @@ const _themes = Object.values(themes).map((v) => ({
 }));
 
 export function Settings() {
+  // Get theme context
   const { theme, setTheme, themeName } = useContext(ThemeContext);
+  // Get chat type and image model context
   const { chatType, setChatType, setImageModel, imageModel } =
     useContext(AppContext);
 
-  const styles = getStyles(theme);
+  // Get styles based on the theme
+  // useMemo to memoize styles based on theme to avoid recalculating styles on every render
+  const styles = useMemo(() => getStyles(theme), [theme]);
+ 
 
-  function renderIcon({ type, props }: IIconProps) {
+  // Function to render icons based on the type
+  // useCallback to memoize the function to prevent re-creation on every render
+  const renderIcon = useCallback(({ type, props }: IIconProps) => {
     if (type.includes("gpt")) {
       return <OpenAIIcon {...props} />;
     }
@@ -62,7 +69,8 @@ export function Settings() {
       return <FontAwesome name="chevron-up" {...props} />;
     }
     return <FontAwesome name="images" {...props} />;
-  }
+  }, []);
+
 
   return (
     <ScrollView
@@ -101,91 +109,88 @@ export function Settings() {
         <Text style={styles.mainText}>Chat Model</Text>
       </View>
       <View style={styles.buttonContainer}>
-        {models.map((model, index) => {
-          return (
-            <TouchableHighlight
-              key={index}
-              underlayColor="transparent"
-              onPress={() => {
-                setChatType(model);
+        {models.map((model, index) => (
+          <TouchableHighlight
+            key={index}
+            underlayColor="transparent"
+            onPress={() => {
+              setChatType(model);
+            }}
+          >
+            <View
+              style={{
+                ...styles.chatChoiceButton,
+                ...getDynamicViewStyle(chatType.label, model.label, theme),
               }}
             >
-              <View
+              {renderIcon({
+                type: model.label,
+                props: {
+                  theme,
+                  size: 18,
+                  style: { marginRight: 8 },
+                  selected: chatType.label === model.label,
+                },
+              })}
+              <Text
                 style={{
-                  ...styles.chatChoiceButton,
-                  ...getDynamicViewStyle(chatType.label, model.label, theme),
+                  ...styles.chatTypeText,
+                  ...getDynamicTextStyle(chatType.label, model.label, theme),
                 }}
               >
-                {renderIcon({
-                  type: model.label,
-                  props: {
-                    theme,
-                    size: 18,
-                    style: { marginRight: 8 },
-                    selected: chatType.label === model.label,
-                  },
-                })}
-                <Text
-                  style={{
-                    ...styles.chatTypeText,
-                    ...getDynamicTextStyle(chatType.label, model.label, theme),
-                  }}
-                >
-                  {model.name}
-                </Text>
-              </View>
-            </TouchableHighlight>
-          );
-        })}
+                {model.name}
+              </Text>
+            </View>
+          </TouchableHighlight>
+        ))}
       </View>
       <View style={styles.titleContainer}>
         <Text style={styles.mainText}>Image Model</Text>
       </View>
       <View style={styles.buttonContainer}>
-        {imageModels.map((model, index) => {
-          return (
-            <TouchableHighlight
-              key={index}
-              underlayColor="transparent"
-              onPress={() => {
-                setImageModel(model.label);
+        {imageModels.map((model, index) => (
+          <TouchableHighlight
+            key={index}
+            underlayColor="transparent"
+            onPress={() => {
+              setImageModel(model.label);
+            }}
+          >
+            <View
+              style={{
+                ...styles.chatChoiceButton,
+                ...getDynamicViewStyle(imageModel, model.label, theme),
               }}
             >
-              <View
+              {renderIcon({
+                type: model.label,
+                props: {
+                  theme,
+                  size: 18,
+                  style: { marginRight: 8 },
+                  color:
+                    imageModel === model.label
+                      ? theme.tintTextColor
+                      : theme.textColor,
+                },
+              })}
+              <Text
                 style={{
-                  ...styles.chatChoiceButton,
-                  ...getDynamicViewStyle(imageModel, model.label, theme),
+                  ...styles.chatTypeText,
+                  ...getDynamicTextStyle(imageModel, model.label, theme),
                 }}
               >
-                {renderIcon({
-                  type: model.label,
-                  props: {
-                    theme,
-                    size: 18,
-                    style: { marginRight: 8 },
-                    color:
-                      imageModel === model.label
-                        ? theme.tintTextColor
-                        : theme.textColor,
-                  },
-                })}
-                <Text
-                  style={{
-                    ...styles.chatTypeText,
-                    ...getDynamicTextStyle(imageModel, model.label, theme),
-                  }}
-                >
-                  {model.name}
-                </Text>
-              </View>
-            </TouchableHighlight>
-          );
-        })}
+                {model.name}
+              </Text>
+            </View>
+          </TouchableHighlight>
+        ))}
       </View>
     </ScrollView>
   );
 }
 
+// Function to get dynamic text styles based on the selected type
 function getDynamicTextStyle(baseType: string, type: string, theme: any) {
   if (type === baseType) {
     return {
@@ -194,6 +199,7 @@ function getDynamicTextStyle(baseType: string, type: string, theme: any) {
   } else return {};
 }
 
+// Function to get dynamic view styles based on the selected type
 function getDynamicViewStyle(baseType: string, type: string, theme: any) {
   if (type === baseType) {
     return {
@@ -202,6 +208,7 @@ function getDynamicViewStyle(baseType: string, type: string, theme: any) {
   } else return {};
 }
 
+// Function to get styles based on the current theme
 const getStyles = (theme: any) =>
   StyleSheet.create({
     buttonContainer: {
@@ -236,3 +243,5 @@ const getStyles = (theme: any) =>
       color: theme.textColor,
     },
   });
+
+export default Settings;

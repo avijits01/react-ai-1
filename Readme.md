@@ -9,6 +9,14 @@ React playground for AI models with streaming capabilities and production-ready 
 - [x] Authentication with server proxy provided
 - [x] Easily add your own AI models and themes
 
+
+## Detailed Docs
+
+- [Testing Plan](./docs/testingPlan.pdf)
+- [Architecture Diagrams](./docs/architectureDiagrams.pdf)
+- [Color Palette](./docs/design/colourPallets.pdf)
+
+
 ## Setup
 
 Follow these steps to set up the project:

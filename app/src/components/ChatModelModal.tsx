@@ -56,6 +56,7 @@ export function ChatModelModal({ handlePresentModalPress }) {
 }
 
 // Function to get styles based on theme
+// tofo: useMemo to memoize styles based on theme to avoid recalculating styles on every render
 function getStyles(theme) {
   return StyleSheet.create({
     closeIconContainer: {
@@ -94,6 +95,7 @@ function getStyles(theme) {
 }
 
 // Function to style option container based on theme and selection state
+// Todo: usecallback to memoize optionContainer styles based on theme and selection state
 function optionContainer(theme, baseType, type) {
   const selected = baseType === type;
   return {
@@ -108,6 +110,7 @@ function optionContainer(theme, baseType, type) {
 }
 
 // Function to style option text based on theme and selection state
+// Todo: usecallback to memoize optionText styles based on theme and selection state
 function optionText(theme, baseType, type) {
   const selected = baseType === type;
   return {
